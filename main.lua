@@ -1,5 +1,5 @@
--- [[ 🔱 100x HUB - FINAL STORAGE FIX ]] --
--- [[ REASON: ENSURE FRUIT IS EQUIPPED BEFORE STORING ]] --
+-- [[ 🔱 100x HUB - EMERGENCY STORAGE FIX ]] --
+-- [[ REASON: FIX HOLDING FRUIT IN HAND WITHOUT STORING ]] --
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 repeat task.wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character
@@ -18,9 +18,9 @@ local function Reinforce()
     if qot then pcall(function() qot(source) end) end
 end
 
--- [ 📦 ADVANCED STORAGE SYSTEM ] --
-local function SecureCollect()
-    print("🔱 100x HUB: Scanning for fruits...")
+-- [ 📦 THE "NO-HOLD" STORAGE SYSTEM ] --
+local function ForceStore()
+    print("🔱 100x HUB: Scanning world...")
     pcall(function() 
         if not LP.Team or LP.Team.Name == "Choosing" then 
             RS.Remotes.CommF_:InvokeServer("SetTeam", "Pirates") 
@@ -33,31 +33,41 @@ local function SecureCollect()
         
         for _, v in pairs(workspace:GetChildren()) do
             if v:IsA("Tool") and string.find(v.Name, "Fruit") then
-                print("🔱 100x HUB: Target -> " .. v.Name)
+                print("🔱 100x HUB: Found " .. v.Name)
                 
-                -- 1. Teleport and pick up
+                -- 1. Get the fruit
                 LP.Character.HumanoidRootPart.CFrame = v.Handle.CFrame
-                task.wait(1)
+                task.wait(1.5)
                 
-                -- 2. Force Equip (Hold the fruit in hand)
+                -- 2. Equip and try multiple store methods
                 local humanoid = LP.Character:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     humanoid:EquipTool(v)
-                    print("🔱 100x HUB: Fruit equipped.")
+                    task.wait(1)
+                    
+                    print("🔱 100x HUB: Executing Multi-Store Method...")
+                    -- Method A: CommF Remote (Standard)
+                    RS.Remotes.CommF_:InvokeServer("StoreFruit", v.Name, v)
+                    
+                    -- Method B: Direct Tool Parent Change (Legacy Store)
+                    task.wait(0.5)
+                    if v.Parent == LP.Character then
+                        RS.Remotes.CommF_:InvokeServer("StoreFruit", v.Name, LP.Character:FindFirstChild(v.Name))
+                    end
                 end
-                task.wait(1)
                 
-                -- 3. Store Command
-                print("🔱 100x HUB: Storing...")
-                local storeResult = RS.Remotes.CommF_:InvokeServer("StoreFruit", v.Name, v)
-                
-                -- 4. Double Check
-                if not v:IsDescendantOf(workspace) or storeResult then
-                    print("🔱 100x HUB: SUCCESS! Stored in Inventory.")
-                    task.wait(3) -- Sync delay
+                -- 3. Verification
+                task.wait(2)
+                if not LP.Character:FindFirstChild(v.Name) and not LP.Backpack:FindFirstChild(v.Name) then
+                    print("🔱 100x HUB: SUCCESS! Item moved to storage.")
+                    task.wait(3)
                     return true
                 else
-                    warn("🔱 100x HUB: Failed to store. Your storage might be full for this fruit.")
+                    warn("🔱 100x HUB: Item still in hand. Storage might be full!")
+                    -- If full, drop it so we can continue hopping
+                    if LP.Character:FindFirstChild(v.Name) then
+                        v.Parent = workspace
+                    end
                 end
                 break
             end
@@ -68,7 +78,7 @@ end
 
 -- [ 🚀 SERVER HOPPER ] --
 local function ServerHop()
-    print("🔱 100x HUB: Searching for new server...")
+    print("🔱 100x HUB: Searching for new session...")
     Reinforce()
     
     local success, res = pcall(function() 
@@ -87,14 +97,13 @@ local function ServerHop()
     TP:Teleport(game.PlaceId)
 end
 
--- [ ⚡ RUN ] --
+-- [ ⚡ EXECUTE ] --
 task.spawn(function()
-    SecureCollect()
+    ForceStore()
     task.wait(1)
     ServerHop()
 end)
 
--- Error Handler
 game:GetService("GuiService").ErrorMessageChanged:Connect(function()
     task.wait(1)
     TP:Teleport(game.PlaceId)
