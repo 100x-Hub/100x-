@@ -11,7 +11,7 @@ local TP = game:GetService("TeleportService")
 local JobFile = "100x_Loop_Data.json"
 
 -- [ 🔗 ลิงก์ถาวรของคุณ (ห้ามใส่ Token เด็ดขาด) ] --
-local RawLink = "https://raw.githubusercontent.com/100x-Hub/100x/main/main.lua"
+local RawLink = "https://raw.githubusercontent.com/100x-Hub/100x-/refs/heads/main/main.lua"
 
 local function Reinforce()
     local source = 'loadstring(game:HttpGet("'..RawLink..'"))()'
