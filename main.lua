@@ -1,5 +1,5 @@
--- [[ 🔱 100x HUB - EMERGENCY STORAGE FIX ]] --
--- [[ REASON: FIX HOLDING FRUIT IN HAND WITHOUT STORING ]] --
+-- [[ 🔱 100x HUB - ULTIMATE STORAGE REPAIR V3.4 ]] --
+-- [[ REASON: FIX PERSISTENT HOLDING & ENSURE REMOTE SYNC ]] --
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 repeat task.wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character
@@ -8,7 +8,6 @@ local LP = game.Players.LocalPlayer
 local RS = game:GetService("ReplicatedStorage")
 local Http = game:GetService("HttpService")
 local TP = game:GetService("TeleportService")
-local JobFile = "100x_Loop_Data.json"
 local RawLink = "https://raw.githubusercontent.com/100x-Hub/100x-/refs/heads/main/main.lua"
 
 -- [ 🛡️ REINFORCE SYSTEM ] --
@@ -18,69 +17,71 @@ local function Reinforce()
     if qot then pcall(function() qot(source) end) end
 end
 
--- [ 📦 THE "NO-HOLD" STORAGE SYSTEM ] --
-local function ForceStore()
-    print("🔱 100x HUB: Scanning world...")
+-- [ 📦 RECURSIVE STORAGE SYSTEM ] --
+local function GlobalStore(fruitName, fruitObj)
+    -- Try multiple ways to invoke the store command
+    local success = false
+    local remotes = {
+        "StoreFruit",
+        "StoreFruitMethod", -- Backup name
+        "StoreFruitInInventory" -- Backup name
+    }
+    
+    for _, remoteName in pairs(remotes) do
+        pcall(function()
+            local res = RS.Remotes.CommF_:InvokeServer(remoteName, fruitName, fruitObj)
+            if res == true or res == 1 then success = true end
+        end)
+        if success then break end
+    end
+    return success
+end
+
+local function SmartCollect()
+    print("🔱 100x HUB: Scanning for fruits...")
     pcall(function() 
         if not LP.Team or LP.Team.Name == "Choosing" then 
             RS.Remotes.CommF_:InvokeServer("SetTeam", "Pirates") 
         end 
     end)
-    task.wait(2)
+    task.wait(1.5)
     
     if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
         LP.Character.HumanoidRootPart.CFrame = LP.Character.HumanoidRootPart.CFrame * CFrame.new(0, 500, 0)
         
         for _, v in pairs(workspace:GetChildren()) do
             if v:IsA("Tool") and string.find(v.Name, "Fruit") then
-                print("🔱 100x HUB: Found " .. v.Name)
-                
-                -- 1. Get the fruit
+                print("🔱 100x HUB: Target Found -> " .. v.Name)
                 LP.Character.HumanoidRootPart.CFrame = v.Handle.CFrame
-                task.wait(1.5)
+                task.wait(1)
                 
-                -- 2. Equip and try multiple store methods
-                local humanoid = LP.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    humanoid:EquipTool(v)
-                    task.wait(1)
-                    
-                    print("🔱 100x HUB: Executing Multi-Store Method...")
-                    -- Method A: CommF Remote (Standard)
-                    RS.Remotes.CommF_:InvokeServer("StoreFruit", v.Name, v)
-                    
-                    -- Method B: Direct Tool Parent Change (Legacy Store)
-                    task.wait(0.5)
-                    if v.Parent == LP.Character then
-                        RS.Remotes.CommF_:InvokeServer("StoreFruit", v.Name, LP.Character:FindFirstChild(v.Name))
-                    end
-                end
+                -- Force Equip
+                local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+                if hum then hum:EquipTool(v) end
+                task.wait(1.5) -- Wait for character to fully hold the fruit
                 
-                -- 3. Verification
+                -- Recursive Storage Attempt
+                print("🔱 100x HUB: Attempting to store...")
+                local stored = GlobalStore(v.Name, v)
+                
                 task.wait(2)
-                if not LP.Character:FindFirstChild(v.Name) and not LP.Backpack:FindFirstChild(v.Name) then
-                    print("🔱 100x HUB: SUCCESS! Item moved to storage.")
-                    task.wait(3)
-                    return true
+                -- Final Check: Is it still in hand?
+                if LP.Character:FindFirstChild(v.Name) or LP.Backpack:FindFirstChild(v.Name) then
+                    warn("🔱 100x HUB: Storage Failed. Dropping fruit to continue.")
+                    v.Parent = workspace -- Drop it if can't store (likely storage full)
                 else
-                    warn("🔱 100x HUB: Item still in hand. Storage might be full!")
-                    -- If full, drop it so we can continue hopping
-                    if LP.Character:FindFirstChild(v.Name) then
-                        v.Parent = workspace
-                    end
+                    print("🔱 100x HUB: SUCCESS! Item Stored.")
                 end
                 break
             end
         end
     end
-    return false
 end
 
--- [ 🚀 SERVER HOPPER ] --
+-- [ 🚀 STABLE SERVER HOP ] --
 local function ServerHop()
-    print("🔱 100x HUB: Searching for new session...")
+    print("🔱 100x HUB: Hopping to next server...")
     Reinforce()
-    
     local success, res = pcall(function() 
         return game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100") 
     end)
@@ -99,7 +100,7 @@ end
 
 -- [ ⚡ EXECUTE ] --
 task.spawn(function()
-    ForceStore()
+    SmartCollect()
     task.wait(1)
     ServerHop()
 end)
