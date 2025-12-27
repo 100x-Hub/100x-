@@ -8,7 +8,7 @@ local LP = game.Players.LocalPlayer
 local RS = game:GetService("ReplicatedStorage")
 local Http = game:GetService("HttpService")
 local TP = game:GetService("TeleportService")
-local RawLink = "https://raw.githubusercontent.com/100x-Hub/100x-/refs/heads/main/main.lua"
+local RawLink = ""
 
 -- [ 🛡️ REINFORCE SYSTEM ] --
 local function Reinforce()
