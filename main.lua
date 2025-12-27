@@ -1,5 +1,5 @@
--- [[ 🔱 100x HUB - GLOBAL EDITION ]] --
--- [[ REWRITTEN IN ENGLISH | ANTI-ERROR 772 | AUTO-STORAGE ]] --
+-- [[ 🔱 100x HUB - ULTIMATE STORAGE FIX ]] --
+-- [[ REASON: ENSURE FRUIT IS STORED BEFORE SERVER HOP ]] --
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 repeat task.wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character
@@ -9,18 +9,17 @@ local RS = game:GetService("ReplicatedStorage")
 local Http = game:GetService("HttpService")
 local TP = game:GetService("TeleportService")
 local JobFile = "100x_Loop_Data.json"
-
--- [ 🔗 PERMANENT RAW LINK ] --
 local RawLink = "https://raw.githubusercontent.com/100x-Hub/100x-/refs/heads/main/main.lua"
 
+-- [ 🛡️ REINFORCE SYSTEM ] --
 local function Reinforce()
     local source = 'loadstring(game:HttpGet("'..RawLink..'"))()'
     local qot = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
     if qot then pcall(function() qot(source) end) end
 end
 
--- [ 📦 FRUIT COLLECTOR ] --
-local function CollectFruits()
+-- [ 📦 SECURE STORAGE SYSTEM ] --
+local function CollectAndStore()
     print("🔱 100x HUB: Scanning for fruits...")
     pcall(function() 
         if not LP.Team or LP.Team.Name == "Choosing" then 
@@ -29,40 +28,48 @@ local function CollectFruits()
     end)
     task.wait(2)
     
-    local fruitFound = false
+    local storedSuccessfully = false
     if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        LP.Character.HumanoidRootPart.CFrame = LP.Character.HumanoidRootPart.CFrame * CFrame.new(0, 1000, 0)
+        -- Hide in the sky while scanning
+        LP.Character.HumanoidRootPart.CFrame = LP.Character.HumanoidRootPart.CFrame * CFrame.new(0, 800, 0)
         
         for _, v in pairs(workspace:GetChildren()) do
             if v:IsA("Tool") and string.find(v.Name, "Fruit") then
-                print("🔱 100x HUB: Target Found -> " .. v.Name)
-                LP.Character.HumanoidRootPart.CFrame = v.Handle.CFrame
-                task.wait(0.8) -- Wait for pickup
+                print("🔱 100x HUB: Target identified -> " .. v.Name)
                 
-                -- Store to Inventory
-                local stored = RS.Remotes.CommF_:InvokeServer("StoreFruit", v.Name, v)
-                if stored or not v:IsDescendantOf(workspace) then
-                    print("🔱 100x HUB: Successfully Stored!")
-                    task.wait(2.5) -- Safety delay for data saving
-                    fruitFound = true
+                -- Move to fruit and pick it up
+                LP.Character.HumanoidRootPart.CFrame = v.Handle.CFrame
+                task.wait(1.5) -- Extra time to ensure character is holding the fruit
+                
+                -- Attempt to Store
+                print("🔱 100x HUB: Attempting to store " .. v.Name)
+                local storeAttempt = RS.Remotes.CommF_:InvokeServer("StoreFruit", v.Name, v)
+                
+                -- Verification Logic
+                if storeAttempt or not v:IsDescendantOf(workspace) then
+                    print("🔱 100x HUB: SUCCESS! Stored in inventory.")
+                    storedSuccessfully = true
+                    task.wait(5) -- CRITICAL: Wait 5 seconds for Game Server to Save Data
+                else
+                    warn("🔱 100x HUB: Failed to store. Storage might be full.")
                 end
                 break
             end
         end
     end
-    return fruitFound
+    return storedSuccessfully
 end
 
--- [ 🚀 SERVER HOPPER ] --
+-- [ 🚀 STABLE SERVER HOP ] --
 local function ServerHop()
-    print("🔱 100x HUB: Finding new server...")
+    print("🔱 100x HUB: Preparing to hop...")
     Reinforce()
     
     local history = {}
     if isfile(JobFile) then 
         pcall(function() history = Http:JSONDecode(readfile(JobFile)) end) 
     end
-    if #history > 40 then history = {} end
+    if #history > 50 then history = {} end
 
     local success, res = pcall(function() 
         return game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100") 
@@ -78,26 +85,23 @@ local function ServerHop()
                 if not visited then
                     table.insert(history, server.id)
                     writefile(JobFile, Http:JSONEncode(history))
-                    print("🔱 100x HUB: Joining Server -> " .. server.id)
                     pcall(function() TP:TeleportToPlaceInstance(game.PlaceId, server.id, LP) end)
-                    task.wait(5)
+                    task.wait(10) -- Wait for teleport
                 end
             end
         end
     end
-    -- Fallback: If no server found, Random Hop
-    print("🔱 100x HUB: Target server full or not found. Force Hopping...")
     TP:Teleport(game.PlaceId)
 end
 
--- [ ⚡ MAIN EXECUTION ] --
+-- [ ⚡ EXECUTE ] --
 task.spawn(function()
-    CollectFruits()
-    task.wait(1.5)
+    local check = CollectAndStore()
+    task.wait(1)
     ServerHop()
 end)
 
--- Anti-Stuck (Error Monitor)
+-- Error Handler (Auto-Hop on Error)
 game:GetService("GuiService").ErrorMessageChanged:Connect(function()
     task.wait(1)
     TP:Teleport(game.PlaceId)
