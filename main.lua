@@ -1,5 +1,5 @@
--- [[ 🔱 100x HUB - ALL-WORLD SUPPORT ]] --
--- [[ WORKS IN SEA 1, 2, AND 3 ]] --
+-- [[ 🔱 100x HUB - FINAL STORAGE FIX ]] --
+-- [[ REASON: ENSURE FRUIT IS EQUIPPED BEFORE STORING ]] --
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 repeat task.wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character
@@ -8,7 +8,7 @@ local LP = game.Players.LocalPlayer
 local RS = game:GetService("ReplicatedStorage")
 local Http = game:GetService("HttpService")
 local TP = game:GetService("TeleportService")
-local JobFile = "100x_AllWorld_Data.json"
+local JobFile = "100x_Loop_Data.json"
 local RawLink = "https://raw.githubusercontent.com/100x-Hub/100x-/refs/heads/main/main.lua"
 
 -- [ 🛡️ REINFORCE SYSTEM ] --
@@ -18,9 +18,9 @@ local function Reinforce()
     if qot then pcall(function() qot(source) end) end
 end
 
--- [ 📦 UNIVERSAL FRUIT COLLECTOR ] --
-local function CollectAndStore()
-    print("🔱 100x HUB: Scanning world for fruits...")
+-- [ 📦 ADVANCED STORAGE SYSTEM ] --
+local function SecureCollect()
+    print("🔱 100x HUB: Scanning for fruits...")
     pcall(function() 
         if not LP.Team or LP.Team.Name == "Choosing" then 
             RS.Remotes.CommF_:InvokeServer("SetTeam", "Pirates") 
@@ -28,42 +28,49 @@ local function CollectAndStore()
     end)
     task.wait(2)
     
-    local storedSuccessfully = false
     if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        LP.Character.HumanoidRootPart.CFrame = LP.Character.HumanoidRootPart.CFrame * CFrame.new(0, 800, 0)
+        LP.Character.HumanoidRootPart.CFrame = LP.Character.HumanoidRootPart.CFrame * CFrame.new(0, 500, 0)
         
         for _, v in pairs(workspace:GetChildren()) do
             if v:IsA("Tool") and string.find(v.Name, "Fruit") then
-                print("🔱 100x HUB: Found " .. v.Name)
+                print("🔱 100x HUB: Target -> " .. v.Name)
+                
+                -- 1. Teleport and pick up
                 LP.Character.HumanoidRootPart.CFrame = v.Handle.CFrame
-                task.wait(1.5) 
+                task.wait(1)
                 
-                -- Global Store Remote
-                local storeAttempt = RS.Remotes.CommF_:InvokeServer("StoreFruit", v.Name, v)
+                -- 2. Force Equip (Hold the fruit in hand)
+                local humanoid = LP.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:EquipTool(v)
+                    print("🔱 100x HUB: Fruit equipped.")
+                end
+                task.wait(1)
                 
-                if storeAttempt or not v:IsDescendantOf(workspace) then
-                    print("🔱 100x HUB: Stored " .. v.Name .. " successfully.")
-                    storedSuccessfully = true
-                    task.wait(5) -- Wait for Server Data Sync
+                -- 3. Store Command
+                print("🔱 100x HUB: Storing...")
+                local storeResult = RS.Remotes.CommF_:InvokeServer("StoreFruit", v.Name, v)
+                
+                -- 4. Double Check
+                if not v:IsDescendantOf(workspace) or storeResult then
+                    print("🔱 100x HUB: SUCCESS! Stored in Inventory.")
+                    task.wait(3) -- Sync delay
+                    return true
+                else
+                    warn("🔱 100x HUB: Failed to store. Your storage might be full for this fruit.")
                 end
                 break
             end
         end
     end
-    return storedSuccessfully
+    return false
 end
 
--- [ 🚀 MULTI-WORLD SERVER HOPPER ] --
+-- [ 🚀 SERVER HOPPER ] --
 local function ServerHop()
-    print("🔱 100x HUB: Finding new session in this world...")
+    print("🔱 100x HUB: Searching for new server...")
     Reinforce()
     
-    local history = {}
-    if isfile(JobFile) then 
-        pcall(function() history = Http:JSONDecode(readfile(JobFile)) end) 
-    end
-    if #history > 50 then history = {} end
-
     local success, res = pcall(function() 
         return game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100") 
     end)
@@ -71,31 +78,24 @@ local function ServerHop()
     if success and res then
         local data = Http:JSONDecode(res)
         for _, server in pairs(data.data) do
-            if server.playing >= 1 and server.playing <= 10 and server.id ~= game.JobId then
-                local visited = false
-                for _, id in pairs(history) do if id == server.id then visited = true break end end
-                
-                if not visited then
-                    table.insert(history, server.id)
-                    writefile(JobFile, Http:JSONEncode(history))
-                    pcall(function() TP:TeleportToPlaceInstance(game.PlaceId, server.id, LP) end)
-                    task.wait(10)
-                end
+            if server.playing >= 1 and server.playing <= 8 and server.id ~= game.JobId then
+                pcall(function() TP:TeleportToPlaceInstance(game.PlaceId, server.id, LP) end)
+                task.wait(5)
             end
         end
     end
     TP:Teleport(game.PlaceId)
 end
 
--- [ ⚡ START ] --
+-- [ ⚡ RUN ] --
 task.spawn(function()
-    CollectAndStore()
+    SecureCollect()
     task.wait(1)
     ServerHop()
 end)
 
--- Auto-reconnect on crash
+-- Error Handler
 game:GetService("GuiService").ErrorMessageChanged:Connect(function()
-    task.wait(2)
+    task.wait(1)
     TP:Teleport(game.PlaceId)
 end)
